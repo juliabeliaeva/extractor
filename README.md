@@ -1,0 +1,11 @@
+A bunch of scripts I wrote to extract contrib code out of main MPS repository.
+
+There are some articles on the web that are trying to provide a solution, like [How to Move Folders Between Git Repositories](http://st-on-it.blogspot.ru/2010/01/how-to-move-folders-between-git.html) or [git filter-branch '--subdirectory-filter' preserving '--no-ff' merges](http://sgf-dma.blogspot.ru/2012/12/git-filter-branch-subdirectory-filter.html) but for variety of reasons they were proven to be unsuitable for me. So I had to write something by myself. The code here is dumb and should not be considered as an example of how to program.
+
+The strategy I used was:
+
+* For every file extract full history (with renames): all commits where the file was changed plus all the paths to the file. That what smartlog.sh and track.sh do. The result are two files: history.txt with paths and revisions.txt with commit ids (which has a lot of duplicates to be removed). In smartlog I used an algorithm I found in [IntelliJ IDEA source code](https://github.com/JetBrains/intellij-community/blob/03d716a2d6fa5109689c1594fb4f64856bb62664/plugins/git4idea/src/git4idea/history/GitHistoryUtils.java#L267) (apparently, git built-in tools can not give me the whole file history at once, which is kinda dissapointing). IntelliJ IDEA code has proven to be a great source of knowledge again.
+
+* Create a branch only with commits in revisions.txt. I tried to use git filter-branch but it somewhy crashed in the process saying that the command line arguments list is too long (and that was on linux). So I wrote my own java program which uses jgit eclipse library to talk to git. I was lazy to do something adequate so the program is extremely dumb. It just walks all revisions from HEAD that are in revisions.txt maintaining a set of "roots" -- ends of current branch without parents. Every commit it tries to attach to one of the roots or their children. And that is how it gets a graph of commits. Then it generates a bash script buildtree.sh that creates that tree using commit-tree.
+
+* Filter the new branch by paths and leave only paths from history.txt. This is done by filter.sh.
