@@ -1,7 +1,5 @@
 package org.jetbrains.extractor;
 
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
-import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.StopWalkException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -29,21 +27,20 @@ public class FilterByRevisions {
         Set<String> revisions = readRevisions(revisionsFile);
         walk.setRevFilter(new MyRevFilter(revisions));
 
-        ArrayList<RevCommit> commitsInOrder = new ArrayList<RevCommit>();
+        ArrayList<RevCommit> commitsInOrder = new ArrayList<>();
         for (RevCommit commit : walk) {
             commitsInOrder.add(commit);
         }
 
-        Map<RevCommit, Set<RevCommit>> parentsMap = new LinkedHashMap<RevCommit, Set<RevCommit>>();
-        Map<RevCommit, Set<RevCommit>> childrenMap = new LinkedHashMap<RevCommit, Set<RevCommit>>();
-        Set<RevCommit> roots = new LinkedHashSet<RevCommit>();
+        Map<RevCommit, Set<RevCommit>> parentsMap = new LinkedHashMap<>();
+        Map<RevCommit, Set<RevCommit>> childrenMap = new LinkedHashMap<>();
+        Set<RevCommit> roots = new LinkedHashSet<>();
 
-        for (int i = 0; i < commitsInOrder.size(); i++) {
+        for (RevCommit current : commitsInOrder) {
             System.out.print(".");
-            RevCommit current = commitsInOrder.get(i);
-            Set<RevCommit> followers = new LinkedHashSet<RevCommit>();
+            Set<RevCommit> followers = new LinkedHashSet<>();
             for (RevCommit root : roots) {
-                Queue<RevCommit> queue = new LinkedList<RevCommit>();
+                Queue<RevCommit> queue = new LinkedList<>();
                 queue.add(root);
                 while (!queue.isEmpty()) {
                     RevCommit c = queue.poll();
@@ -57,7 +54,7 @@ public class FilterByRevisions {
                     }
                 }
 
-                Set<RevCommit> toRemove = new HashSet<RevCommit>();
+                Set<RevCommit> toRemove = new HashSet<>();
                 for (RevCommit tip : followers) {
                     for (RevCommit base : followers) {
                         if (base != tip && walk.isMergedInto(base, tip)) {
@@ -73,19 +70,11 @@ public class FilterByRevisions {
 
             for (RevCommit following : followers) {
                 // add to parent map
-                Set<RevCommit> parents = parentsMap.get(following);
-                if (parents == null) {
-                    parents = new LinkedHashSet<RevCommit>();
-                    parentsMap.put(following, parents);
-                }
+                Set<RevCommit> parents = parentsMap.computeIfAbsent(following, k -> new LinkedHashSet<>());
                 parents.add(current);
             }
             // add to children map
-            Set<RevCommit> children = childrenMap.get(current);
-            if (children == null) {
-                children = new LinkedHashSet<RevCommit>();
-                childrenMap.put(current, children);
-            }
+            Set<RevCommit> children = childrenMap.computeIfAbsent(current, k -> new LinkedHashSet<>());
             children.addAll(followers);
         }
 
@@ -100,7 +89,7 @@ public class FilterByRevisions {
                 for (int j = commitIndex + 1; j < commitsInOrder.size(); j++) {
                     RevCommit parent = commitsInOrder.get(j);
                     if (walk.isMergedInto(parent, commit)) {
-                        parents = new HashSet<RevCommit>();
+                        parents = new HashSet<>();
                         parentsMap.put(commit, parents);
                         parents.add(parent);
                         break;
@@ -170,27 +159,19 @@ public class FilterByRevisions {
             scriptContent.append("\n");
         }
 
-        File buildtree = new File(outputFile);
-        PrintWriter writer = null;
-        try {
-            writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(buildtree), Charset.forName("UTF-8")));
+        File buildTreeScript = new File(outputFile);
+        try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(buildTreeScript), Charset.forName("UTF-8")))) {
             writer.print(scriptContent.toString());
             writer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
         }
     }
 
-    public static Set<String> readRevisions(String revisionsFileName) {
-        Set<String> revisions = new HashSet<String>();
+    private static Set<String> readRevisions(String revisionsFileName) {
+        Set<String> revisions = new HashSet<>();
         File revisionsFile = new File(revisionsFileName);
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new FileReader(revisionsFile));
+        try (BufferedReader reader = new BufferedReader(new FileReader(revisionsFile))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 revisions.add(line);
@@ -199,25 +180,18 @@ public class FilterByRevisions {
             return revisions;
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                }
-            }
         }
     }
 
     private static class MyRevFilter extends RevFilter {
-        private final Set<String> myCommitIds = new HashSet<String>();
+        private final Set<String> myCommitIds = new HashSet<>();
 
-        public MyRevFilter(Collection<String> ids) {
+        MyRevFilter(Collection<String> ids) {
             myCommitIds.addAll(ids);
         }
 
         @Override
-        public boolean include(RevWalk walker, RevCommit commit) throws StopWalkException, MissingObjectException, IncorrectObjectTypeException, IOException {
+        public boolean include(RevWalk walker, RevCommit commit) throws StopWalkException {
             return myCommitIds.contains(commit.getId().getName());
         }
 
