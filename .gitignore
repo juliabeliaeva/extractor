@@ -1,0 +1,15 @@
+# gradle
+/build/
+.gradle
+!gradle-wrapper.jar
+
+# idea
+/out
+.idea/workspace.xml
+.idea/shelf
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+
+# generated revisions/files lists, scripts, etc
+/generated
