@@ -17,15 +17,16 @@ import java.util.*;
 public class FilterByRevisions {
 
     public static void main(String[] args) throws IOException {
-        String basedir = args[0];
-        String repo = args[1];
+        String repositoryFile = args[0];
+        String revisionsFile = args[1];
+        String outputFile = args[2];
         FileRepositoryBuilder repositoryBuilder = new FileRepositoryBuilder();
-        Repository repository = repositoryBuilder.setGitDir(new File(basedir + "/" + repo + "/.git")).readEnvironment().findGitDir().build();
+        Repository repository = repositoryBuilder.setGitDir(new File(repositoryFile, ".git")).readEnvironment().findGitDir().build();
         RevWalk walk = new RevWalk(repository);
         walk.sort(RevSort.TOPO);
         walk.markStart(walk.parseCommit(repository.resolve("HEAD")));
 
-        Set<String> revisions = readRevisions(basedir);
+        Set<String> revisions = readRevisions(revisionsFile);
         walk.setRevFilter(new MyRevFilter(revisions));
 
         ArrayList<RevCommit> commitsInOrder = new ArrayList<RevCommit>();
@@ -120,7 +121,6 @@ public class FilterByRevisions {
         StringBuilder scriptContent = new StringBuilder();
         scriptContent.append("#!/bin/bash\n\n");
 
-        scriptContent.append("cd " + basedir + "/" + repo + "\n");
         scriptContent.append("commit");
         scriptContent.append(commitsInOrder.size() - 1);
         scriptContent.append("=");
@@ -170,7 +170,7 @@ public class FilterByRevisions {
             scriptContent.append("\n");
         }
 
-        File buildtree = new File(basedir + "/buildtree.sh");
+        File buildtree = new File(outputFile);
         PrintWriter writer = null;
         try {
             writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(buildtree), Charset.forName("UTF-8")));
@@ -185,9 +185,9 @@ public class FilterByRevisions {
         }
     }
 
-    public static Set<String> readRevisions(String basedir) {
+    public static Set<String> readRevisions(String revisionsFileName) {
         Set<String> revisions = new HashSet<String>();
-        File revisionsFile = new File(basedir + "/revisions.uniq.txt");
+        File revisionsFile = new File(revisionsFileName);
         BufferedReader reader = null;
         try {
             reader = new BufferedReader(new FileReader(revisionsFile));

@@ -1,7 +1,8 @@
 #!/bin/bash
 
 shopt -s globstar && shopt -s nullglob || exit
-cd $1
+
+history=$1
 
 git filter-branch --tree-filter '
 #!/bin/bash
@@ -9,7 +10,7 @@ git filter-branch --tree-filter '
 walk() {
 	for file in $1/*
 	do 
-		if  ! grep -q -e "^$file" ../history.txt
+		if  ! grep -q -e "^$file" '"$history"'
 		then
 			#echo "removing $file"
 			rm -rf $file
@@ -25,7 +26,7 @@ walk() {
 
 for file in *
 do
-	if  ! grep -q -e "^$file" ../history.txt
+	if  ! grep -q -e "^$file" '"$history"'
 	then
 		#echo "removing $file"
 		rm -rf $file
