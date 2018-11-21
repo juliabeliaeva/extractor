@@ -1,6 +1,6 @@
 #!/bin/bash
 
-shopt -s nullglob|| exit
+shopt -s nullglob || exit
 
 history=$1
 
