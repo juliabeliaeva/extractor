@@ -1,11 +1,30 @@
-A bunch of scripts I wrote to extract contrib code out of main MPS repository.
+## Extractor
 
-There are some articles on the web that are trying to provide a solution, like [How to Move Folders Between Git Repositories](http://st-on-it.blogspot.ru/2010/01/how-to-move-folders-between-git.html) or [git filter-branch '--subdirectory-filter' preserving '--no-ff' merges](http://sgf-dma.blogspot.ru/2012/12/git-filter-branch-subdirectory-filter.html) but for variety of reasons they were proven to be unsuitable for me. So I had to write something by myself. The code here is dumb and should not be considered as an example of how to program.
+Scripts for extracting a history of a subfolder of a git repository into a separate repository.
 
-The strategy I used was:
+#### Motivation
 
-* For every file extract full history (with renames): all commits where the file was changed plus all the paths to the file. That what smartlog.sh and track.sh do. The result are two files: history.txt with paths and revisions.txt with commit ids (which has a lot of duplicates to be removed). In smartlog I used an algorithm I found in [IntelliJ IDEA source code](https://github.com/JetBrains/intellij-community/blob/03d716a2d6fa5109689c1594fb4f64856bb62664/plugins/git4idea/src/git4idea/history/GitHistoryUtils.java#L267) (apparently, git built-in tools can not give me the whole file history at once, which is kinda dissapointing). IntelliJ IDEA code has proven to be a great source of knowledge again.
+I needed to extract a repository with [MPS Contrib](https://github.com/JetBrains/MPS-Contrib) files from the main [MPS repository](https://github.com/JetBrains/MPS). My requirements were:
+* retain file history through renames/moves, even when the files were moved outside of the specified subfolder (this allows to extract multiple folders by moving them into one subfolders first);
+* generate a nice readable history without a web of unnecessary merge commits;
+* find a solution that will work on a big repository in a reasonable time.
 
-* Create a branch only with commits in revisions.txt. I tried to use git filter-branch but it somewhy crashed in the process saying that the command line arguments list is too long (and that was on linux). So I wrote my own java program which uses jgit eclipse library to talk to git. I was lazy to do something adequate so the program is extremely dumb. It just walks all revisions from HEAD that are in revisions.txt maintaining a set of "roots" -- ends of current branch without parents. Every commit it tries to attach to one of the roots or their children. And that is how it gets a graph of commits. Then it generates a bash script buildtree.sh that creates that tree using commit-tree.
+Helpful articles:
+* [How to Move Folders Between Git Repositories](http://st-on-it.blogspot.ru/2010/01/how-to-move-folders-between-git.html)
+* [git filter-branch '--subdirectory-filter' preserving '--no-ff' merges](http://sgf-dma.blogspot.ru/2012/12/git-filter-branch-subdirectory-filter.html)
 
-* Filter the new branch by paths and leave only paths from history.txt. This is done by filter.sh.
+#### Used approach
+
+1. For every file extract full history (with renames): all commits where the file was changed plus all the paths to the file (`smartlog.sh`). The output contains two files: `revisions.txt` with commit ids and `history.txt` with file names. File history algorithm that is used here is described in [GitFileHistory.java](https://github.com/JetBrains/intellij-community/blob/18d2398d373ea13d8618e2d5422450ccb53202da/plugins/git4idea/src/git4idea/history/GitFileHistory.java#L50) from [IntelliJ IDEA](https://www.jetbrains.com/idea/) source code.
+
+2. Create a branch only with commits in revisions.txt (`FilterByRevisions.java`). It walks all revisions from HEAD that are in revisions.txt maintaining a set of "roots" -- ends of current branch without parents. Every commit it tries to attach to one of the roots or their children. The output is a bash script `buildtree.sh` which generates a resulting graph of commits using `commit-tree` command.
+
+3. Execute `buildtree.sh` and checkout a `HEAD` of generated graph. If there are several heads, all but one are lost.
+
+4. Filter HEAD by paths and leave only paths from `history.txt`. This is done by `filter.sh`.
+
+#### Usage
+
+Disclaimer: this is a "works on my machine" project, so use at your own risk.
+
+Execute `scripts/main.sh <PATH TO REPOSITORY> <RELATIVE PATH TO THE FOLDER TO EXTRACT>`
