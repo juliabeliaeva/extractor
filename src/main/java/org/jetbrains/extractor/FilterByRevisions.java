@@ -1,4 +1,4 @@
-package jetbrains.mps;
+package org.jetbrains.extractor;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;

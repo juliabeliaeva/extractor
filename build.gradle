@@ -1,0 +1,15 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://repo.eclipse.org/content/groups/releases/"
+    }
+}
+
+dependencies {
+    compile 'org.eclipse.jgit:org.eclipse.jgit:4.7.0.201704051617-r'
+}
+
+mainClassName = "org.jetbrains.extractor.FilterByRevisions"
